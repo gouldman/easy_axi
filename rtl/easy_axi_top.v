@@ -1,4 +1,4 @@
-`include "easyaxi_define.v"
+`include "easy_axi_define.v"
 module EASYAXI_TOP (
     input wire clk,
     input wire rst_n,
