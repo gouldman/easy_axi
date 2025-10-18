@@ -52,7 +52,7 @@ assign rd_hs_done = axi_mst_rvalid && axi_mst_rready;
 assign arvalid_set = enable && ~trans_buffer_r;
 assign arvalid_clr = ar_hs_done;
 assign ar_req_change = ar_hs_done;
-assign trans_buffer_clr = rd_hs_done && axi_mst_rlast == 1;
+assign trans_buffer_clr = rd_hs_done && axi_mst_rlast;
 assign trans_buffer_set = ar_hs_done;
 assign store_data = rd_hs_done;
 
