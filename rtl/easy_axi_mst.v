@@ -16,43 +16,43 @@ localparam DLY = 0.1;
 //--------------------------------------------------------------------------------
 // Inner Signal
 //--------------------------------------------------------------------------------
-reg                        axi_mst_arvalid_r;
-reg [`AXI_ADDR_WIDTH -1:0] axi_mst_araddr_r;
-reg [`AXI_ID_WIDTH   -1:0] axi_mst_arid_r;
+reg axi_mst_arvalid_r;
+reg [`AXI_ID_WIDTH  -1:0]       axi_mst_arid_r;
+reg [`AXI_ADDR_WIDTH-1:0]       axi_mst_araddr_r;
 
+wire hs_done;
 
-//--------------------------------------------------------------------------------
-// Main Ctrl
-//--------------------------------------------------------------------------------
+wire arvalid_set;
+wire arvalid_clr;
+
+wire ar_req_change;
+
+assign hs_done = axi_mst_arvalid && axi_mst_arready;
+assign arvalid_set = enable && ~axi_mst_arvalid;
+assign arvalid_clr = hs_done;
+
+assign ar_req_change = hs_done;
 
 always @(posedge clk or negedge rst_n) begin
-    if (~rst_n) begin
-        axi_mst_arvalid_r <= #DLY 1'b0;
-    end
-    else if (~axi_mst_arvalid_r & enable) begin  // Trigger on enable
-        axi_mst_arvalid_r <= #DLY 1'b1;          // Assert valid
-    end
-    else if (axi_mst_arvalid & axi_mst_arready) begin
-        axi_mst_arvalid_r <= #DLY 1'b0;          // Deassert after handshake
-    end
+    if(!rst_n)
+        axi_mst_arvalid_r <= #DLY 0;
+    else if(arvalid_set)
+        axi_mst_arvalid_r <= #DLY 1;
+    else if(arvalid_clr)
+        axi_mst_arvalid_r <= #DLY 0;
 end
 
 always @(posedge clk or negedge rst_n) begin
-    if (~rst_n) begin
-        axi_mst_arid_r   <= #DLY {`AXI_ID_WIDTH{1'b0}};
-        axi_mst_araddr_r <= #DLY {`AXI_ADDR_WIDTH{1'b0}};
-    end
-    else if (axi_mst_arvalid & axi_mst_arready) begin
-        axi_mst_arid_r   <= #DLY axi_mst_arid_r + 1;  // Increment ID per transfer
-        axi_mst_araddr_r <= #DLY (axi_mst_arid_r < 4'hA) ? 16'h0000 : 16'h0001;  // Switch base address
+    if(!rst_n) begin
+        axi_mst_arid_r <= #DLY 0;
+        axi_mst_araddr_r <= #DLY 0;
+    end else if(ar_req_change) begin
+        axi_mst_arid_r <= #DLY axi_mst_arid + 1'b1;
+        axi_mst_araddr_r <= #DLY (axi_mst_arid > 8) ? axi_mst_araddr_r + 4'b1000 : axi_mst_araddr_r;
     end
 end
 
-//--------------------------------------------------------------------------------
-// Output Signal
-//--------------------------------------------------------------------------------
 assign axi_mst_arvalid = axi_mst_arvalid_r;
-assign axi_mst_arid    = axi_mst_arid_r;
-assign axi_mst_araddr  = axi_mst_araddr_r;
-
+assign axi_mst_arid = axi_mst_arid_r;
+assign axi_mst_araddr = axi_mst_araddr_r;
 endmodule

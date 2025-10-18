@@ -21,7 +21,6 @@ reg                  enable;
 
 localparam SIM_PERIOD = 20; // 20ns -> 50MHz
 
-integer k;
 initial begin
     #(SIM_PERIOD/2);
     clk = 1'b0;
