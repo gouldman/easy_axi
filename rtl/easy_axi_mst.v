@@ -62,10 +62,10 @@ assign store_data = rd_hs_done;
 always @(posedge clk or negedge rst_n) begin
     if(!rst_n)
         axi_mst_arvalid_r <= #DLY 0;
-    else if(arvalid_set)
-        axi_mst_arvalid_r <= #DLY 1;
     else if(arvalid_clr)
         axi_mst_arvalid_r <= #DLY 0;
+    else if(arvalid_set)
+        axi_mst_arvalid_r <= #DLY 1;
 end
 
 always @(posedge clk or negedge rst_n) begin
@@ -76,8 +76,9 @@ always @(posedge clk or negedge rst_n) begin
         axi_mst_arlen_r <= 0;
         axi_mst_arburst_r <= `AXI_BURST_FIXED;
     end else if(ar_req_change) begin
-        axi_mst_arid_r <= #DLY axi_mst_arid + 1'b1;
+        axi_mst_arid_r <= #DLY axi_mst_arid_r + 1'b1;
         axi_mst_araddr_r <= #DLY (axi_mst_arid > 8) ? axi_mst_araddr_r + 4'b1000 : axi_mst_araddr_r;
+        axi_mst_arlen_r <= axi_mst_arid_r + 1'b1;
     end
 end
 

@@ -34,9 +34,9 @@ reg  [`AXI_LEN_W   -1:0] arlen_buff_r;       // AXI Length buffer
 reg  [`AXI_SIZE_W  -1:0] arsize_buff_r;      // AXI Size buffer
 reg  [`AXI_BURST_W -1:0] arburst_buff_r;     // AXI Burst type buffer
 
-reg ar_capture_r;
-wire ar_capture_clr;
-wire ar_capture_set;
+reg trans_buffer_r;
+wire trans_buffer_set;
+wire trans_buffer_clr;
 
 reg [CLR_CNT_W - 1: 0] rd_gen_cnt;
 wire rd_gen;
@@ -60,16 +60,16 @@ assign rlast = (rd_len_index_r == arlen_buff_r);
 //--------------------------------------------------------------------------------
 // logic for capture the request from ar channel
 //--------------------------------------------------------------------------------
-assign ar_capture_clr = rd_gen && rlast;
-assign ar_capture_set = ar_hs_done;
+assign trans_buffer_clr = rd_hs_done && rlast;
+assign trans_buffer_set = ar_hs_done;
 
 always@(posedge clk or negedge rst_n) begin
     if(!rst_n)
-        ar_capture_r <= 0;
-    else if(ar_capture_set)
-        ar_capture_r <= 1;
-    else if(ar_capture_clr)
-        ar_capture_r <= 0;
+        trans_buffer_r <= 0;
+    else if(trans_buffer_set)
+        trans_buffer_r <= 1;
+    else if(trans_buffer_clr)
+        trans_buffer_r <= 0;
 end
 
 
@@ -99,7 +99,7 @@ end
 always@(posedge clk or negedge rst_n) begin
     if(!rst_n)
         rd_gen_cnt = 0;
-    else if(ar_capture_r) 
+    else if(ar_hs_done) 
         rd_gen_cnt = rd_gen_cnt + 1;
     else if(rd_hs_done)
         rd_gen_cnt <= rlast ? 0 : 1;
@@ -119,19 +119,21 @@ always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         rd_len_index_r <= 0;
     end
-    else if(rd_gen)begin
-        rd_len_index_r <= rd_len_index_r + 1;
-    end else if(rlast && rd_hs_done) begin
+    else if(rlast && rd_hs_done) begin
         rd_len_index_r <= 0;
-    end
+    end else if(rd_gen)begin
+        rd_len_index_r <= rd_len_index_r + 1;
+    end 
 end
 
 //--------------------------------------------------------------------------------
 // output signal
 //--------------------------------------------------------------------------------
-assign axi_slv_arready = !addr_miss && ~ar_capture_r;
+assign axi_slv_arready = !addr_miss && ~trans_buffer_r;
 
 
 assign axi_slv_rlast = rlast;
 assign axi_slv_rdata = rd_len_index_r;
+assign axi_slv_rresp = 0;
+assign axi_slv_rvalid = rd_gen;
 endmodule
