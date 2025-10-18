@@ -31,6 +31,8 @@ reg [`AXI_ADDR_W -1:0] axi_mst_araddr_r;
 reg [`AXI_SIZE_W -1:0] axi_mst_arsize_r;
 reg [`AXI_LEN_W   -1:0] axi_mst_arlen_r;
 reg [`AXI_BURST_W -1:0] axi_mst_arburst_r;
+reg  [`AXI_DATA_W  -1:0] rd_data_buff_r;      // Read data buffer
+reg  [`AXI_RESP_W  -1:0] rd_resp_buff_r;      // Read response buffer
 
 reg trans_buffer_r;//indicate that the whole transition(including address read and read finished.
 wire trans_buffer_set;
@@ -43,15 +45,16 @@ wire arvalid_set;
 wire arvalid_clr;
 
 wire ar_req_change;
+wire store_data;
 
 assign ar_hs_done = axi_mst_arvalid && axi_mst_arready;
 assign rd_hs_done = axi_mst_rvalid && axi_mst_rready;
-assign arvalid_set = enable && ~axi_mst_arvalid;
+assign arvalid_set = enable && ~trans_buffer_r;
 assign arvalid_clr = ar_hs_done;
 assign ar_req_change = ar_hs_done;
-assign trans_buffer_clr = rd_hs_done;
+assign trans_buffer_clr = rd_hs_done && axi_mst_rlast == 1;
 assign trans_buffer_set = ar_hs_done;
-
+assign store_data = rd_hs_done;
 
 //--------------------------------------------------------------------------------
 // logic for ar channel
@@ -78,11 +81,30 @@ always @(posedge clk or negedge rst_n) begin
     end
 end
 
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        trans_buffer_r <= 0;
+    end
+    else if(trans_buffer_set) begin
+        trans_buffer_r <= 1;
+    end else if(trans_buffer_clr) begin
+        trans_buffer_r <= 0;
+    end
+end
 //--------------------------------------------------------------------------------
 // logic for r channel
 //--------------------------------------------------------------------------------
 
-
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        rd_data_buff_r <= 0;
+        rd_resp_buff_r <= 0 ;
+    end
+    else if(store_data) begin
+        rd_data_buff_r <= axi_mst_rdata;
+        rd_resp_buff_r <= axi_mst_rresp ;
+    end
+end
 
 //--------------------------------------------------------------------------------
 // logic for output
@@ -90,5 +112,10 @@ end
 assign axi_mst_arvalid = axi_mst_arvalid_r;
 assign axi_mst_arid = axi_mst_arid_r;
 assign axi_mst_araddr = axi_mst_araddr_r;
-assign axi_mst_arready = 1;
+assign axi_mst_arlen = axi_mst_arlen_r;
+assign axi_mst_arsize = axi_mst_arsize_r;
+assign axi_mst_arburst = axi_mst_arburst_r;
+
+
+assign axi_mst_rready = 1;
 endmodule
